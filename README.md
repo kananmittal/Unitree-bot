@@ -380,52 +380,11 @@ The test script provides:
 - **Confusion Matrix**: Shows predictions vs true labels
 - **Per-Class Metrics**: Precision, Recall, F1-Score for each emotion class
 
-Example output:
-```
-============================================================
-TEST RESULTS
-============================================================
-Accuracy: 0.8234
-UAR (Unweighted Average Recall): 0.8156
-
-Confusion Matrix:
-            Happy Neutral     Sad   Angry
-     Happy     245      12       8       5
-   Neutral      15     230      10       8
-        Sad     10       8     220      12
-      Angry      8       5      15     225
-
-Per-Class Metrics:
-Class        Precision      Recall    F1-Score
-------------------------------------------------
-Happy           0.8824     0.9224     0.9020
-Neutral         0.9016     0.8760     0.8886
-Sad             0.8704     0.8800     0.8752
-Angry           0.9000     0.8889     0.8944
-============================================================
-```
-
 #### Single File Inference
 Provides:
 - Predicted emotion class
 - Confidence score
 - Probability distribution over all classes
-
-Example output:
-```
-============================================================
-PREDICTION RESULTS
-============================================================
-Predicted class: 0 (Happy)
-Confidence: 0.8543
-
-Class probabilities:
-  Happy       : 0.8543 <--
-  Neutral     : 0.0821
-  Sad         : 0.0432
-  Angry       : 0.0204
-============================================================
-```
 
 ### Finding Checkpoints
 
