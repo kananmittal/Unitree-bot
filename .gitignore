@@ -42,10 +42,11 @@ checkpoints/
 *.mp4
 *.avi
 
-# Datasets (large files - uncomment if you want to exclude)
-# datasets/
-# !datasets/processed/*.csv
-# !datasets/processed/*.json
+# Datasets (large files - exclude datasets directory)
+datasets/
+# But keep processed CSV/JSON files for reference
+!datasets/processed/*.csv
+!datasets/processed/*.json
 
 # Logs
 *.log
