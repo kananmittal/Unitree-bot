@@ -1,0 +1,8 @@
+# Python dependencies
+torch
+torchaudio
+soundfile
+git+https://github.com/facebookresearch/denoiser.git
+
+pandas
+scikit-learn

@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data and cache
+*.pt
+*.pth
+feat_cache/
+test_cache/
+checkpoints/
+*.wav
+*.mp3
+*.mp4
+*.avi
+
+# Datasets (large files - uncomment if you want to exclude)
+# datasets/
+# !datasets/processed/*.csv
+# !datasets/processed/*.json
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
