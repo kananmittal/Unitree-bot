@@ -1,0 +1,86 @@
+# Default configuration for SER training
+# This config is optimized for better accuracy
+
+audio:
+  sample_rate: 16000
+  n_mfcc: 40
+  n_fft: 512
+  hop_length: 160
+  win_length: 400
+  f_min: 20.0
+  f_max: 8000.0
+
+augmentation:
+  enabled: true
+  time_stretch_prob: 0.3
+  time_stretch_rate:
+  - 0.8
+  - 1.2
+  pitch_shift_prob: 0.3
+  pitch_shift_steps:
+  - -2
+  - 2
+  noise_injection_prob: 0.3
+  noise_level:
+  - 0.001
+  - 0.01
+  mixup_prob: 0.2
+  mixup_alpha: 0.4
+
+model:
+  n_mfcc: 40
+  num_classes: 4
+  conv_channels:
+  - 128
+  - 256
+  lstm_hidden: 128
+  lstm_layers: 2
+  dropout: 0.2
+  use_depthwise: true
+  use_temp_scale: true
+  use_residual: true
+  attention_heads: 4
+
+training:
+  epochs: 50
+  batch_size: 16
+  lr: 0.001
+  weight_decay: 0.0001
+  warmup_epochs: 5
+  patience: 10
+  min_delta: 0.0001
+  grad_clip: 1.0
+  label_smoothing: 0.1
+  class_weights: true
+  scheduler: cosine
+  scheduler_params:
+    cosine:
+      T_max: 50
+      eta_min: 1.0e-06
+    plateau:
+      factor: 0.5
+      patience: 5
+      min_lr: 1.0e-06
+    step:
+      step_size: 10
+      gamma: 0.5
+
+data:
+  train_csv: datasets/processed/iemocap_train.csv
+  val_csv: datasets/processed/iemocap_val.csv
+  test_csv: datasets/processed/iemocap_test.csv
+  cache_dir: feat_cache
+  num_workers: 2
+  val_split: 0.1
+  pin_memory: true
+  max_audio_length: 10.0
+  min_audio_length: 0.5
+
+system:
+  device: auto
+  seed: 42
+  amp: true
+  out_dir: checkpoints
+  log_dir: logs
+  save_best_only: false
+  save_interval: 5

@@ -1,8 +1,26 @@
-# Python dependencies
-torch
-torchaudio
-soundfile
+# Core dependencies
+torch>=2.0.0
+torchaudio>=2.0.0
+soundfile>=0.12.0
+
+# Audio processing
 git+https://github.com/facebookresearch/denoiser.git
 
-pandas
-scikit-learn
+# Data handling
+pandas>=1.5.0
+numpy>=1.23.0
+scikit-learn>=1.2.0
+
+# Configuration
+pyyaml>=6.0
+
+# Visualization (optional)
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
+# Progress bars
+tqdm>=4.64.0
+
+# Additional utilities
+scipy>=1.10.0
+librosa>=0.10.0  # For additional audio processing features (optional)
