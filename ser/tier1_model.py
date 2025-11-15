@@ -2,8 +2,6 @@
 
 # Tier 1 = MFCC -> TsPCA -> CNN stack -> BiLSTM -> Head (logits/probs/confidence)
 
-# Drop directly into your project.
-
 import torch
 
 from torch import nn
