@@ -109,9 +109,21 @@ class Config:
         if 'audio' in data:
             config.audio = AudioConfig(**data['audio'])
         if 'augmentation' in data:
-            config.augmentation = AugmentationConfig(**data['augmentation'])
+            # Convert lists to tuples for augmentation config
+            aug_data = data['augmentation'].copy()
+            if 'time_stretch_rate' in aug_data and isinstance(aug_data['time_stretch_rate'], list):
+                aug_data['time_stretch_rate'] = tuple(aug_data['time_stretch_rate'])
+            if 'pitch_shift_steps' in aug_data and isinstance(aug_data['pitch_shift_steps'], list):
+                aug_data['pitch_shift_steps'] = tuple(aug_data['pitch_shift_steps'])
+            if 'noise_level' in aug_data and isinstance(aug_data['noise_level'], list):
+                aug_data['noise_level'] = tuple(aug_data['noise_level'])
+            config.augmentation = AugmentationConfig(**aug_data)
         if 'model' in data:
-            config.model = ModelConfig(**data['model'])
+            # Convert list to tuple for conv_channels
+            model_data = data['model'].copy()
+            if 'conv_channels' in model_data and isinstance(model_data['conv_channels'], list):
+                model_data['conv_channels'] = tuple(model_data['conv_channels'])
+            config.model = ModelConfig(**model_data)
         if 'training' in data:
             config.training = TrainingConfig(**data['training'])
         if 'data' in data:

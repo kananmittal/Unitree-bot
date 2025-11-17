@@ -48,6 +48,7 @@ def tier0_to_mfcc(path: str, device: str = "cpu", n_mfcc: int = 40) -> torch.Ten
     wav = load_audio(path)
     den = denoise_demucs(wav, device=device)
     speech = vad_silero_keep_speech(den)
-    if speech.numel() == 1:                         # no speech
-        return torch.zeros(n_mfcc, 1)
+    if speech.numel() <= 1:                         # no speech or empty
+        # Return minimal valid MFCC features instead of raising error
+        return torch.zeros(n_mfcc, 100)  # (n_mfcc, time_frames)
     return mfcc_40(speech, n_mfcc=n_mfcc)

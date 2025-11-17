@@ -5,58 +5,11 @@ Script to run Tier 1 Model Demo (single file inference)
 import torch
 import sys
 import os
-from tier1_model import SER_Tier1
+from tier1_model import SER_Tier1, load_model_from_checkpoint
 from tier0_io import tier0_to_mfcc
 
 # Emotion class names for 4-class setup
 CLASS_NAMES = ["Happy", "Neutral", "Sad", "Angry"]
-
-def load_model_from_checkpoint(checkpoint_path, device):
-    """Load model from checkpoint file"""
-    print(f"Loading checkpoint: {checkpoint_path}")
-    ckpt = torch.load(checkpoint_path, map_location=device)
-    
-    # Handle different checkpoint formats
-    if "model" in ckpt:
-        state_dict = ckpt["model"]
-        args = ckpt.get("args", {})
-    else:
-        state_dict = ckpt
-        args = {}
-    
-    # Infer model parameters
-    num_classes = args.get("num_classes", 4)
-    n_mfcc = args.get("n_mfcc", 40)
-    
-    # Try to infer from state_dict if not in args
-    # New model structure: cls_head.2.weight (LayerNorm, Dropout, Linear)
-    if "cls_head.2.weight" in state_dict:
-        num_classes = state_dict["cls_head.2.weight"].shape[0]
-    # Old model structure: head.1.weight (LayerNorm, Linear)
-    elif "head.1.weight" in state_dict:
-        num_classes = state_dict["head.1.weight"].shape[0]
-    
-    # New model structure: cnn.0.net.0.weight (first conv in first Conv1DBlock)
-    if "cnn.0.net.0.weight" in state_dict:
-        # For depthwise-separable: groups=in_ch, so weight shape is (in_ch, 1, k)
-        # For regular conv: weight shape is (out_ch, in_ch, k)
-        weight = state_dict["cnn.0.net.0.weight"]
-        if weight.shape[1] == 1:  # depthwise-separable: (in_ch, 1, k)
-            n_mfcc = weight.shape[0]  # in_ch is n_mfcc
-        else:  # regular conv: (out_ch, in_ch, k)
-            n_mfcc = weight.shape[1]  # in_ch is n_mfcc
-    # Old model structure: conv.weight
-    elif "conv.weight" in state_dict:
-        n_mfcc = state_dict["conv.weight"].shape[1]
-    # Also check attn.mlp.2.weight as fallback (shape: (n_mfcc, hidden))
-    if "attn.mlp.2.weight" in state_dict:
-        # attn.mlp.2.weight shape is (n_mfcc, hidden)
-        n_mfcc = state_dict["attn.mlp.2.weight"].shape[0]
-    
-    model = SER_Tier1(n_mfcc=n_mfcc, num_classes=num_classes).to(device)
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model, num_classes
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -79,7 +32,7 @@ if __name__ == "__main__":
     
     # Load model
     if checkpoint_path and os.path.exists(checkpoint_path):
-        model, num_classes = load_model_from_checkpoint(checkpoint_path, device)
+        model, num_classes, _ = load_model_from_checkpoint(checkpoint_path, device)
         class_names = CLASS_NAMES if num_classes == 4 else [f"Class {i}" for i in range(num_classes)]
     else:
         if checkpoint_path:

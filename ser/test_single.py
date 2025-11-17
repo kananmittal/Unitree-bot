@@ -6,7 +6,7 @@ Usage: python ser/test_single.py <audio_file> <checkpoint_path> [--class_names]
 import sys
 import torch
 import os
-from tier1_model import SER_Tier1
+from tier1_model import SER_Tier1, load_model_from_checkpoint
 from tier0_io import tier0_to_mfcc
 
 def main():
@@ -29,26 +29,13 @@ def main():
         print(f"Error: Checkpoint not found: {checkpoint_path}")
         sys.exit(1)
     
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    # Load model using the utility function
+    model, num_classes, _ = load_model_from_checkpoint(checkpoint_path, device)
+    print(f"Model loaded: {num_classes} classes")
     
-    # Get model parameters
-    if "args" in checkpoint:
-        args = checkpoint["args"]
-        num_classes = args.get("num_classes", 4)
-        n_mfcc = args.get("n_mfcc", 40)
-    else:
-        num_classes = 4
-        n_mfcc = 40
-    
-    # Load model
-    model = SER_Tier1(n_mfcc=n_mfcc, num_classes=num_classes).to(device)
-    model.load_state_dict(checkpoint["model"])
-    model.eval()
-    print(f"Model loaded: {num_classes} classes, {n_mfcc} MFCC features")
-    
-    # Process audio
+    # Process audio (default n_mfcc=40)
     print(f"\nProcessing audio: {audio_file}")
-    mfcc = tier0_to_mfcc(audio_file, device=device, n_mfcc=n_mfcc)
+    mfcc = tier0_to_mfcc(audio_file, device=device, n_mfcc=40)
     print(f"MFCC shape: {tuple(mfcc.shape)}")
     
     # Predict
