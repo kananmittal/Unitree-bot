@@ -2,6 +2,10 @@ import torch, torchaudio
 
 TARGET_SR = 16_000
 
+# Global cache for VAD model to avoid reloading on every call
+_vad_model_cache = None
+_vad_utils_cache = None
+
 # ---------- load/resample ----------
 def load_audio(path: str, target_sr: int = TARGET_SR) -> torch.Tensor:
     wav, sr = torchaudio.load(path)                # (C, T)
@@ -24,9 +28,30 @@ def denoise_demucs(wav_16k: torch.Tensor, device: str = "cpu") -> torch.Tensor:
 
 # ---------- VAD (Silero) → keep only speech ----------
 def vad_silero_keep_speech(wav_16k: torch.Tensor) -> torch.Tensor:
-    model, utils = torch.hub.load('snakers4/silero-vad', 'silero_vad', onnx=False, trust_repo=True)
-    get_speech_timestamps = utils[0]  # get_speech_timestamps function
-    ts_list = get_speech_timestamps(wav_16k, model, sampling_rate=TARGET_SR)
+    global _vad_model_cache, _vad_utils_cache
+    
+    # Load model only once and cache it
+    if _vad_model_cache is None or _vad_utils_cache is None:
+        try:
+            # Use source='local' to prefer local cache and avoid network calls
+            _vad_model_cache, _vad_utils_cache = torch.hub.load(
+                'snakers4/silero-vad', 'silero_vad', onnx=False, trust_repo=True, 
+                force_reload=False, source='local'
+            )
+        except Exception as e:
+            # If loading fails (network issue, cache issue), try with source='github' as fallback
+            try:
+                _vad_model_cache, _vad_utils_cache = torch.hub.load(
+                    'snakers4/silero-vad', 'silero_vad', onnx=False, trust_repo=True, 
+                    force_reload=False
+                )
+            except Exception:
+                # If all else fails, return the original audio (skip VAD)
+                print(f"Warning: Failed to load VAD model, skipping VAD processing: {e}")
+                return wav_16k
+    
+    get_speech_timestamps = _vad_utils_cache[0]  # get_speech_timestamps function
+    ts_list = get_speech_timestamps(wav_16k, _vad_model_cache, sampling_rate=TARGET_SR)
     if not ts_list:
         return torch.zeros(1)
     chunks = [wav_16k[t['start']:t['end']] for t in ts_list]
