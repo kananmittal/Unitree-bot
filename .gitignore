@@ -35,8 +35,10 @@ Thumbs.db
 *.pt
 *.pth
 feat_cache/
+feat_cache_*/
 test_cache/
 checkpoints/
+checkpoints_*/
 *.wav
 *.mp3
 *.mp4

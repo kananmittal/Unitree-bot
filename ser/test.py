@@ -271,39 +271,32 @@ def main():
     class_names = get_class_names(emotion_map, num_classes)
     print(f"Classes: {class_names}")
     
-    # Create configuration for dataset loading
-    # NEW - Handle both dict and Config object
-if config_dict:
-    if isinstance(config_dict, dict):
-        # Create a simple namespace to hold config
-        class SimpleConfig:
-            def __init__(self):
-                self.data = type('obj', (object,), {
-                    'cache_dir': args.cache_dir,
-                    'num_workers': args.num_workers
-                })()
-        config = SimpleConfig()
-    else:
-        config = config_dict
+    # Load configuration from checkpoint directory
+    config_path = os.path.join(os.path.dirname(args.checkpoint), "config.yaml")
+    if os.path.exists(config_path):
+        print(f"Loading config from: {config_path}")
+        # Load config using the original config file from training
+        import sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        config = Config.from_yaml(config_path.replace("checkpoints_crema/config.yaml", "config_crema.yaml"))
         config.data.cache_dir = args.cache_dir
         config.data.num_workers = args.num_workers
-else:
-    class SimpleConfig:
-        def __init__(self):
-            self.data = type('obj', (object,), {
-                'cache_dir': args.cache_dir,
-                'num_workers': args.num_workers
-            })()
-    config = SimpleConfig()
+    else:
+        print("Warning: No config found, using default")
+        config = Config()
+        config.data.cache_dir = args.cache_dir
+        config.data.num_workers = args.num_workers
     
     # Load test dataset (no augmentation)
     print(f"\nLoading test dataset: {args.test_csv}")
+    # Don't use emotion_map from checkpoint - let it auto-detect from CSV
+    # The CSV already has numeric labels (0-5) so no mapping needed
     test_ds = create_dataset(
         args.test_csv,
         config,
         audio_augmentation=None,
         mfcc_augmentation=None,
-        emotion_map=emotion_map
+        emotion_map=None  # Auto-detect from CSV
     )
     
     # Create data loader

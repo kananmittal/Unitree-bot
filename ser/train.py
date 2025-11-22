@@ -57,6 +57,9 @@ def parse_args():
     # Augmentation
     ap.add_argument("--no_augmentation", action="store_true", help="Disable data augmentation")
     
+    # Resume training
+    ap.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
+    
     return ap.parse_args()
 
 
@@ -104,8 +107,7 @@ def create_scheduler(optimizer, config, steps_per_epoch):
             mode='max',  # Maximize UAR
             factor=params["plateau"]["factor"],
             patience=params["plateau"]["patience"],
-            min_lr=params["plateau"]["min_lr"],
-            verbose=True
+            min_lr=params["plateau"]["min_lr"]
         )
     elif scheduler_type == "step":
         return optim.lr_scheduler.StepLR(
@@ -374,7 +376,7 @@ def evaluate(model, loader, crit, device, config):
     return avg_loss, metrics
 
 
-def save_checkpoint(model, config, metrics, epoch, path, emotion_map=None):
+def save_checkpoint(model, config, metrics, epoch, path, emotion_map=None, optimizer=None, scheduler=None, scaler=None):
     """Save model checkpoint with all metadata"""
     checkpoint = {
         "model": model.state_dict(),
@@ -384,6 +386,12 @@ def save_checkpoint(model, config, metrics, epoch, path, emotion_map=None):
         "emotion_map": emotion_map,
         "timestamp": datetime.now().isoformat()
     }
+    if optimizer is not None:
+        checkpoint["optimizer"] = optimizer.state_dict()
+    if scheduler is not None:
+        checkpoint["scheduler"] = scheduler.state_dict()
+    if scaler is not None:
+        checkpoint["scaler"] = scaler.state_dict()
     torch.save(checkpoint, path)
 
 
@@ -456,15 +464,44 @@ def main():
         mode='max'  # Maximize UAR
     )
     
+    # Resume from checkpoint if provided
+    start_epoch = 1
+    best_uar = -1.0
+    best_path = None
+    
+    if args.resume and os.path.exists(args.resume):
+        print(f"\nResuming training from checkpoint: {args.resume}")
+        checkpoint = torch.load(args.resume, map_location=device)
+        model.load_state_dict(checkpoint['model'])
+        if 'optimizer' in checkpoint and checkpoint['optimizer'] and isinstance(checkpoint['optimizer'], dict) and 'param_groups' in checkpoint['optimizer']:
+            opt.load_state_dict(checkpoint['optimizer'])
+        else:
+            print("Warning: Optimizer state not found in checkpoint, starting fresh")
+        if scheduler and 'scheduler' in checkpoint and checkpoint['scheduler']:
+            scheduler.load_state_dict(checkpoint['scheduler'])
+        if scaler and 'scaler' in checkpoint and checkpoint['scaler']:
+            scaler.load_state_dict(checkpoint['scaler'])
+        start_epoch = checkpoint.get('epoch', 1) + 1
+        best_uar = checkpoint.get('metrics', {}).get('uar', -1.0)
+        print(f"Resumed from epoch {checkpoint.get('epoch', 1)}")
+        print(f"Best UAR so far: {best_uar:.4f}")
+        # Find best checkpoint path if exists
+        if 'config' in checkpoint:
+            best_path = os.path.join(config.system.out_dir, f"best_uar_{best_uar:.4f}.pt")
+    
+    # Load emotion map for checkpoint saving
+    emotion_map_path = os.path.join(config.system.out_dir, "emotion_map.json")
+    emotion_map = None
+    if os.path.exists(emotion_map_path):
+        with open(emotion_map_path, 'r') as f:
+            emotion_map = json.load(f)
+    
     # Training loop
     print("\n" + "=" * 60)
     print("Starting training...")
     print("=" * 60)
     
-    best_uar = -1.0
-    best_path = None
-    
-    for epoch in range(1, config.training.epochs + 1):
+    for epoch in range(start_epoch, config.training.epochs + 1):
         # Train
         tr_loss = train_one_epoch(
             model, train_ld, opt, crit, scaler, device, config,
@@ -498,21 +535,13 @@ def main():
         if uar > best_uar:
             best_uar = uar
             best_path = os.path.join(config.system.out_dir, f"best_uar_{best_uar:.4f}.pt")
-            
-            # Load emotion map
-            emotion_map_path = os.path.join(config.system.out_dir, "emotion_map.json")
-            emotion_map = None
-            if os.path.exists(emotion_map_path):
-                with open(emotion_map_path, 'r') as f:
-                    emotion_map = json.load(f)
-            
-            save_checkpoint(model, config, va_metrics, epoch, best_path, emotion_map)
+            save_checkpoint(model, config, va_metrics, epoch, best_path, emotion_map, opt, scheduler, scaler)
             print(f"  → Saved best model: {best_path}")
         
         # Save periodic checkpoints
         if config.system.save_interval > 0 and epoch % config.system.save_interval == 0:
             periodic_path = os.path.join(config.system.out_dir, f"epoch_{epoch:03d}.pt")
-            save_checkpoint(model, config, va_metrics, epoch, periodic_path)
+            save_checkpoint(model, config, va_metrics, epoch, periodic_path, emotion_map, opt, scheduler, scaler)
         
         # Early stopping check
         if early_stopping(uar):
@@ -522,7 +551,7 @@ def main():
     
     # Save final model
     final_path = os.path.join(config.system.out_dir, "last.pt")
-    save_checkpoint(model, config, va_metrics, epoch, final_path)
+    save_checkpoint(model, config, va_metrics, epoch, final_path, emotion_map, opt, scheduler, scaler)
     print(f"\nSaved final model: {final_path}")
     
     if best_path:
